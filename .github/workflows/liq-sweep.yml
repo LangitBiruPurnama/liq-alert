@@ -1,0 +1,47 @@
+name: Liquidity Sweep Alert
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: liq-sweep
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Pasang requests
+        run: pip install requests
+
+      - name: Pulihkan riwayat sinyal
+        uses: actions/cache/restore@v4
+        with:
+          path: state
+          key: seen-${{ github.run_id }}
+          restore-keys: seen-
+
+      - name: Scan dan kirim alert
+        run: python alert_cloud.py
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+
+      - name: Simpan riwayat sinyal
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: state
+          key: seen-${{ github.run_id }}
